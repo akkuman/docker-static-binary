@@ -1,0 +1,45 @@
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: github.com/moby/moby ref
+        required: true
+        type: string
+
+env:
+  DESTDIR: ./build
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # guardrails timeout for the whole job
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - binary
+    steps:
+      - 
+        name: Checkout moby/moby
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/moby/moby.git moby
+          cd moby
+          git checkout ${{ inputs.ref }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build
+        uses: docker/bake-action@v5
+        with:
+          targets: ${{ matrix.target }}
+      -
+        name: List artifacts
+        run: |
+          tree -nh ${{ env.DESTDIR }}
+      -
+        name: Check artifacts
+        run: |
+          find ${{ env.DESTDIR }} -type f -exec file -e ascii -- {} +
