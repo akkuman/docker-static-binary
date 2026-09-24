@@ -15,11 +15,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 120 # guardrails timeout for the whole job
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - binary
     steps:
       - 
         name: Checkout moby/moby
@@ -28,13 +23,25 @@ jobs:
           repository: moby/moby
           ref: ${{ inputs.ref }}
       -
+        name: Special Platforms
+        run: |
+          cat >> docker-bake.hcl <<'EOF'
+          target "all-linux" {
+            inherits = ["all"]
+            platforms = [
+              "linux/amd64",
+              "linux/arm64",
+            ]
+          }
+          EOF
+      -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
         name: Build
         uses: docker/bake-action@v5
         with:
-          targets: ${{ matrix.target }}
+          targets: all-linux
       -
         name: List artifacts
         run: |
